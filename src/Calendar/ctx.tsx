@@ -122,7 +122,7 @@ export const CalendarProvider = ({ children }: any) => {
         })
 
     }
-    const getIntervalsCalendar = (date: Date): DateInterval[] => {
+    const getIntervalsCalendar = (_date: Date): DateInterval[] => {
         return getIntervals(calendar, showingDate);
     }
     const [showingDate, setShowingDate] = useState<Date>(new Date());

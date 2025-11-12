@@ -72,7 +72,6 @@ function PastDatesCalendar(): JSX.Element {
 
 
 export function Calendar(): JSX.Element {
-    const calendarContext = useContext(CalendarContext);
     return <div className="calendar">
         <h2>Calendar</h2>
         <div className="flex min-h-screen">
