@@ -19,6 +19,8 @@ interface CalendarContextType {
     getDescriptions(): string[];
     setIsStopLastIntervalOnAdd(value: boolean): void;
     getIsStopLastIntervalOnAdd(): boolean;
+    showingDate: Date;
+    setShowingDate(date: Date): void;
 }
 
 export const CalendarContext = createContext<CalendarContextType>({
@@ -31,7 +33,9 @@ export const CalendarContext = createContext<CalendarContextType>({
     deleteInterval: () => null,
     getDescriptions: () => [],
     setIsStopLastIntervalOnAdd: () => { },
-    getIsStopLastIntervalOnAdd: () => true
+    getIsStopLastIntervalOnAdd: () => true,
+    showingDate: new Date(),
+    setShowingDate: () => { },
 })
 
 function mapToObj(map: Map<string, DateInterval[]>): Record<string, DateInterval[]> {
@@ -84,7 +88,7 @@ export const CalendarProvider = ({ children }: any) => {
 
     const addIntervalCalendar = (dateInterval: DateInterval) => {
         // Check intervals with null end date
-        const nowDate = new Date();
+        const nowDate = showingDate;
         if (isStopLastIntervalOnAdd) {
             console.log('Checking for intervals with no end date before adding new interval');
             const currentIntervals = getIntervals(calendar, dateInterval.start || nowDate);
@@ -119,10 +123,13 @@ export const CalendarProvider = ({ children }: any) => {
 
     }
     const getIntervalsCalendar = (date: Date): DateInterval[] => {
-        return getIntervals(calendar, date);
+        return getIntervals(calendar, showingDate);
     }
+    const [showingDate, setShowingDate] = useState<Date>(new Date());
 
     const calendarValue: CalendarContextType = {
+        showingDate,
+        setShowingDate,
         addInterval: addIntervalCalendar,
         getIntervals: getIntervalsCalendar,
         getDates: () => {

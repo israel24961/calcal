@@ -29,23 +29,67 @@ const paletteColors = [
     '#a3e635', // lime-400
 ];
 
+// Clickable past dates (showing the number of intervals for each date). When clicked set the current date in the context to that date.
+// Also a button to load more past dates.
+// Dark gray letter if all intervals are ended, otherwise white letter and white gray background. and a tooltip showing that there are active intervals.
+function PastDatesCalendar(): JSX.Element {
+    const calendarContext = useContext(CalendarContext);
+    const showingResults = useRef<number>(5);
+
+    const pastDates = calendarContext.getDates();
+
+
+
+    return <div>
+        <h3> Past dates </h3>
+        <ul className="past-dates-list list-none pl-5">
+            {pastDates.map((date, index) => {
+                const intervals = calendarContext.getIntervals(date);
+                return <li key={index}>
+                    <button className={`date-button ${(intervals.every(interval => interval.end)) ? 'text-gray-400' : 'text-white bg-gray-600'}`}
+                        onClick={() => {
+                            calendarContext.setShowingDate(date);
+                        }}
+                        title={intervals.every(interval => interval.end) ? 'All intervals ended' : 'There are active intervals'}
+                    >
+                        {date.toDateString()} ({intervals.length} intervals)
+                    </button>
+                </li>;
+            })}
+            <li>
+                <button className="load-more-button text-blue-500"
+                    onClick={() => {
+                        showingResults.current += 5;
+                        // Force re-render
+                        calendarContext.setShowingDate(calendarContext.showingDate);
+                    }}>
+                    {pastDates.length > showingResults.current ? 'Load more dates' : 'No more dates to load'}
+                </button>
+            </li>
+        </ul>
+    </div>
+}
+
+
 export function Calendar(): JSX.Element {
     const calendarContext = useContext(CalendarContext);
     return <div className="calendar">
         <h2>Calendar</h2>
-        <CalendarTodayIntervals />
-        <button className="mouse" onClick={() => {
-            console.log('Adding interval');
-            calendarContext.addInterval({} as DateInterval);
-        }} > Add Interval</button>
+        <div className="flex min-h-screen">
+            <aside className="w-64 bg-gray-800 text-white p-4">
+                <PastDatesCalendar />
+            </aside>
+
+            <CalendarIntervalRepresentations />
+        </div>
     </div>
 }
 
-function CalendarTodayIntervals(): JSX.Element {
+function CalendarIntervalRepresentations(): JSX.Element {
     const calendarContext = useContext(CalendarContext);
 
     const [curDate, setCurDate] = useState(new Date());
-    const intervals = calendarContext.getIntervals(curDate);
+    const intervals = calendarContext.getIntervals(calendarContext.showingDate);
 
     useEffect(() => {
         let intervalId: NodeJS.Timeout;
@@ -78,31 +122,90 @@ function CalendarTodayIntervals(): JSX.Element {
     console.log('Current date:', curDate.toLocaleString(), 'Intervals:', intervals);
 
     return <div className="today-intervals">
-        <h3>Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')} - (Total time: {
-            humanDuration(intervals.reduce((acc, interval) => {
-                const elapsed = interval.end ? (interval.end.getTime() - interval.start.getTime()) / 1000 : (new Date().getTime() - interval.start.getTime()) / 1000;
-                return acc + (elapsed || 0);
-            }, 0))
-        })
-        </h3>
+        {calendarContext.showingDate.toDateString() === curDate.toDateString() ?
+            <h3>Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')} - (Total time: {
+                humanDuration(intervals.reduce((acc, interval) => {
+                    const elapsed = interval.end ? (interval.end.getTime() - interval.start.getTime()) / 1000 : (new Date().getTime() - interval.start.getTime()) / 1000;
+                    return acc + (elapsed || 0);
+                }, 0))
+            })
+            </h3> :
+            <h3> Historic Intervals for {calendarContext.showingDate.toDateString()} ({intervals.length})</h3>
+        }
         <button onClick={() => {
             calendarContext.setIsStopLastIntervalOnAdd(!calendarContext.getIsStopLastIntervalOnAdd());
         }}
             title={`Toggle allowing only one interval to run at a time. Currently: ${calendarContext.getIsStopLastIntervalOnAdd() ? 'Only one allowed' : 'Multiple allowed'}`}
         > {calendarContext.getIsStopLastIntervalOnAdd() ? 'Allowing only one to run' : 'Allowing multiple to run'} </button>
-        {intervals.length === 0 ? <p>No intervals for today</p> :
-            intervals.map((_, index) => {
-                const reversedIndex = intervals.length - 1 - index;
-                const interval = intervals[reversedIndex];
-                return <CalendarOneInterval key={index} interval={interval} />
-            })
-        }
+        <CalendarIntervals intervals={intervals} minimized={false} />
+        <button className="mouse" onClick={() => {
+            console.log('Adding interval');
+            calendarContext.addInterval({} as DateInterval);
+        }} > Add Interval</button>
     </div>;
 }
-function CalendarOneInterval(props: { interval: DateInterval, key: number }): JSX.Element {
+function CalendarIntervals(props: { intervals: DateInterval[], minimized: boolean }): JSX.Element {
+    const minimizedClass = 'text-gray-500';
+    const [isMinimized, setIsMinimized] = useState(props.minimized);
+
+    if (props.minimized) {
+        if (props.intervals.length === 0)
+            return <div className={` ${minimizedClass}`}
+                onClick={() => setIsMinimized(!isMinimized)}>
+                <p>No intervals for today</p>
+            </div>;
+
+        const lastInterval = props.intervals[props.intervals.length - 1];
+        return <div className={minimizedClass}>
+            <CalendarOneInterval interval={lastInterval} key={props.intervals.length - 1} readonly={true} />
+        </div >;
+    }
+
+
+    const elem = props.intervals.map((_, index) => {
+        const reversedIndex = props.intervals.length - 1 - index;
+        const interval = props.intervals[reversedIndex];
+        return <CalendarOneInterval key={index} interval={interval} readonly={false} />;
+    })
+    return <div>
+        {elem}
+    </div>
+
+}
+
+function CalendarOneInterval(props: { interval: DateInterval, key: number, readonly: boolean }): JSX.Element {
     const calendarContext = useContext(CalendarContext);
     const [originalInterval] = useState<DateInterval>(props.interval);
     const [intervalState, setIntervalState] = useState(props.interval);
+
+    function hash(text: string): number {
+        if (!text) return 0
+
+        let state = 13 // prime
+        for (let index = 0; index < text.length; index++) {
+            const charCode: number = text.charCodeAt(index);
+            state += state * charCode;
+            // Prevent overflow by %
+            state %= (charCode * 3109) // prime
+        }
+        return state;
+    }
+    const msgColorLabel = paletteColors[hash(intervalState.msg) % paletteColors.length];
+
+    // If the interval has an end time, calculate the elapsed time in seconds, else with the current time
+    const elapsedTime: number | null = intervalState.end
+        ? (intervalState.end.getTime() - intervalState.start.getTime()) / 1000
+        : (new Date().getTime() - intervalState.start.getTime()) / 1000;
+
+    const interval_container = 'flex flex-row items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 ';
+    if (props.readonly)
+        return <div className={interval_container}>
+            <div className="interval-duration" > {humanDuration(elapsedTime || 0)} </div>
+            <div className="interval" onClick={() => { setIsEditing(!isEditing); }}>
+                <p>{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
+            </div>
+        </div>
+
 
     const [isEditing, setIsEditing] = useState(false);
     useEffect(() => {
@@ -167,24 +270,6 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number }): JS
     const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 ' +
         'cursor-not-allowed' : '';
 
-    function hash(text: string): number {
-        if (!text) return 0
-
-        let state = 13 // prime
-        for (let index = 0; index < text.length; index++) {
-            const charCode: number = text.charCodeAt(index);
-            state += state * charCode;
-            // Prevent overflow by %
-            state %= (charCode * 3109) // prime
-        }
-        return state;
-    }
-    const msgColorLabel = paletteColors[hash(intervalState.msg) % paletteColors.length];
-
-    // If the interval has an end time, calculate the elapsed time in seconds, else with the current time
-    const elapsedTime: number | null = intervalState.end
-        ? (intervalState.end.getTime() - intervalState.start.getTime()) / 1000
-        : (new Date().getTime() - intervalState.start.getTime()) / 1000;
 
 
     return <>
@@ -266,7 +351,7 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
     const handleChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const value = e.target.value;
         props.onSave({ ...props.interval, msg: value });
-        // setIntervalState(prev => ({ ...prev, msg: value }));
+        // setIntervalState(prev => ({...prev, msg: value }));
     };
 
 
