@@ -52,6 +52,7 @@ function PastDatesCalendar(): JSX.Element {
                         }}
                         title={intervals.every(interval => interval.end) ? 'All intervals ended' : 'There are active intervals'}
                     >
+                    <span>{date.toDateString()} ({intervals.length} intervals)</span>
                     </button>
                 </li>;
             })}
