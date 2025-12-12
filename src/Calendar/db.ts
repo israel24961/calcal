@@ -49,6 +49,7 @@ const DB_NAME = 'calendar-db';
 const DB_VERSION = 2; // Increment version for schema change
 const TAGS_STORE = 'tags';
 const INTERVALS_STORE = 'intervals';
+const EMPTY_TAG_ID = 0; // Constant for intervals without tags
 
 let dbInstance: IDBPDatabase<CalendarDB> | null = null;
 
@@ -65,18 +66,19 @@ export async function getDB(): Promise<IDBPDatabase<CalendarDB>> {
                 tagStore.createIndex('by-name', 'name', { unique: true });
             }
             
-            // Create intervals store
-            if (!db.objectStoreNames.contains(INTERVALS_STORE)) {
+            // Migration from old schema (version 1) to new schema (version 2)
+            if (oldVersion === 1 && db.objectStoreNames.contains('intervals')) {
+                // Delete old store (data will be migrated from localStorage)
+                db.deleteObjectStore('intervals');
+                
+                // Create new intervals store with updated schema
                 const intervalStore = db.createObjectStore(INTERVALS_STORE, { keyPath: 'id', autoIncrement: true });
                 intervalStore.createIndex('by-date', 'date', { unique: false });
                 intervalStore.createIndex('by-identifier', 'identifier', { unique: false });
-            }
-            
-            // Migration from old schema (version 1) to new schema (version 2)
-            if (oldVersion === 1 && db.objectStoreNames.contains('intervals')) {
-                // Delete old store - data will be migrated from localStorage
-                db.deleteObjectStore('intervals');
-                // Recreate with new schema
+                
+                // Note: Old data will be migrated from localStorage in migrateFromLocalStorage
+            } else if (!db.objectStoreNames.contains(INTERVALS_STORE)) {
+                // Create intervals store for fresh installs
                 const intervalStore = db.createObjectStore(INTERVALS_STORE, { keyPath: 'id', autoIncrement: true });
                 intervalStore.createIndex('by-date', 'date', { unique: false });
                 intervalStore.createIndex('by-identifier', 'identifier', { unique: false });
@@ -90,7 +92,7 @@ export async function getDB(): Promise<IDBPDatabase<CalendarDB>> {
 // Helper function to get or create a tag
 async function getOrCreateTag(db: IDBPDatabase<CalendarDB>, tagName: string): Promise<number> {
     if (!tagName) {
-        return 0; // Use 0 for empty tags
+        return EMPTY_TAG_ID; // Use constant for empty tags
     }
     
     const tx = db.transaction(TAGS_STORE, 'readwrite');
@@ -109,14 +111,27 @@ async function getOrCreateTag(db: IDBPDatabase<CalendarDB>, tagName: string): Pr
     return id as number;
 }
 
-// Helper function to get tag name by ID
-async function getTagName(db: IDBPDatabase<CalendarDB>, tagId: number | null): Promise<string> {
-    if (!tagId || tagId === 0) {
-        return '';
+// Helper function to get multiple tag names efficiently
+async function getTagNames(db: IDBPDatabase<CalendarDB>, tagIds: (number | null)[]): Promise<Map<number, string>> {
+    const uniqueIds = new Set(tagIds.filter(id => id && id !== EMPTY_TAG_ID) as number[]);
+    const tagMap = new Map<number, string>();
+    
+    if (uniqueIds.size === 0) {
+        return tagMap;
     }
     
-    const tag = await db.get(TAGS_STORE, tagId);
-    return tag?.name || '';
+    const tx = db.transaction(TAGS_STORE);
+    const promises = Array.from(uniqueIds).map(async id => {
+        const tag = await tx.store.get(id);
+        if (tag) {
+            tagMap.set(id, tag.name);
+        }
+    });
+    
+    await Promise.all(promises);
+    await tx.done;
+    
+    return tagMap;
 }
 
 export async function saveAllIntervals(calendar: Map<string, DateInterval[]>): Promise<void> {
@@ -174,17 +189,17 @@ export async function getIntervals(date: string): Promise<DateInterval[] | undef
         return undefined;
     }
     
+    // Get all tag IDs and fetch them in batch
+    const tagIds = records.map(r => r.tagId);
+    const tagMap = await getTagNames(db, tagIds);
+    
     // Convert records back to DateInterval format
-    const intervals: DateInterval[] = [];
-    for (const record of records) {
-        const tagName = await getTagName(db, record.tagId);
-        intervals.push({
-            identifier: record.identifier,
-            start: new Date(record.start),
-            end: record.end ? new Date(record.end) : null,
-            msg: tagName,
-        });
-    }
+    const intervals: DateInterval[] = records.map(record => ({
+        identifier: record.identifier,
+        start: new Date(record.start),
+        end: record.end ? new Date(record.end) : null,
+        msg: record.tagId ? (tagMap.get(record.tagId) || '') : '',
+    }));
     
     return intervals;
 }
@@ -212,6 +227,11 @@ export async function getAllDates(): Promise<string[]> {
 export async function getAllIntervals(): Promise<Map<string, DateInterval[]>> {
     const db = await getDB();
     const allRecords = await db.getAll(INTERVALS_STORE);
+    
+    // Get all unique tag IDs and fetch them in batch
+    const tagIds = allRecords.map(r => r.tagId);
+    const tagMap = await getTagNames(db, tagIds);
+    
     const map = new Map<string, DateInterval[]>();
     
     // Group by date
@@ -220,12 +240,11 @@ export async function getAllIntervals(): Promise<Map<string, DateInterval[]>> {
             map.set(record.date, []);
         }
         
-        const tagName = await getTagName(db, record.tagId);
         map.get(record.date)!.push({
             identifier: record.identifier,
             start: new Date(record.start),
             end: record.end ? new Date(record.end) : null,
-            msg: tagName,
+            msg: record.tagId ? (tagMap.get(record.tagId) || '') : '',
         });
     }
     
