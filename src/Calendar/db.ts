@@ -86,14 +86,19 @@ export async function migrateFromLocalStorage(): Promise<boolean> {
     }
 
     try {
-        const obj = JSON.parse(stored);
+        const obj = JSON.parse(stored) as Record<string, Array<{
+            identifier: string;
+            start: string | Date;
+            end: string | Date | null;
+            msg: string;
+        }>>;
         const db = await getDB();
         
         // Start a transaction to write all data
         const tx = db.transaction(STORE_NAME, 'readwrite');
         
         for (const key in obj) {
-            const intervals = obj[key].map((interval: any) => ({
+            const intervals = obj[key].map((interval) => ({
                 ...interval,
                 start: new Date(interval.start),
                 end: interval.end ? new Date(interval.end) : null,
