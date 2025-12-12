@@ -316,6 +316,9 @@ function addInterval(ddI: Map<string, DateInterval[]>, dateInterval: DateInterva
     const day = dayD.toDateString()
     dateInterval = cropDayInterval(dateInterval);
 
+    // Random identifier for the interval - set BEFORE adding to map
+    dateInterval.identifier = dateInterval.identifier || Math.random().toString(36).substring(2, 15);
+
     const isDayKey = ddF.has(day);
     if (isDayKey) {
         const dayIntervals = ddF.get(day)!;
@@ -323,9 +326,6 @@ function addInterval(ddI: Map<string, DateInterval[]>, dateInterval: DateInterva
     } else {
         ddF.set(day, [dateInterval]);
     }
-
-    // Random identifier for the interval
-    dateInterval.identifier = dateInterval.identifier || Math.random().toString(36).substring(2, 15);
 
     return ddF;
 }
