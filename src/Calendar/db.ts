@@ -1,3 +1,19 @@
+/**
+ * IndexedDB storage module for calendar data
+ * 
+ * This module provides a persistent storage solution using IndexedDB API
+ * to replace the previous localStorage implementation. Benefits include:
+ * - Better performance for large datasets
+ * - Structured data storage with proper indexing
+ * - Asynchronous API that doesn't block the main thread
+ * - Larger storage capacity than localStorage
+ * 
+ * The database schema includes a single object store 'intervals' that stores
+ * calendar intervals organized by date (key is the date string).
+ * 
+ * Migration from localStorage is handled automatically on first load.
+ */
+
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import { DateInterval } from './ctx';
 
