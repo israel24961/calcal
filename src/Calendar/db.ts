@@ -33,9 +33,31 @@ export async function getDB(): Promise<IDBPDatabase<CalendarDB>> {
     return dbInstance;
 }
 
-export async function saveIntervals(date: string, intervals: DateInterval[]): Promise<void> {
+export async function saveAllIntervals(calendar: Map<string, DateInterval[]>): Promise<void> {
     const db = await getDB();
-    await db.put(STORE_NAME, { date, intervals });
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    
+    // Get all existing keys to determine what to delete
+    const existingKeys = await db.getAllKeys(STORE_NAME);
+    const currentKeys = new Set(calendar.keys());
+    
+    // Delete keys that are no longer in the calendar
+    for (const key of existingKeys) {
+        if (!currentKeys.has(key)) {
+            await tx.store.delete(key);
+        }
+    }
+    
+    // Save or update all current intervals
+    for (const [date, intervals] of calendar.entries()) {
+        if (intervals.length > 0) {
+            await tx.store.put({ date, intervals });
+        } else {
+            await tx.store.delete(date);
+        }
+    }
+    
+    await tx.done;
 }
 
 export async function getIntervals(date: string): Promise<DateInterval[] | undefined> {
@@ -86,13 +108,23 @@ export async function migrateFromLocalStorage(): Promise<boolean> {
     }
 
     try {
+        const db = await getDB();
+        
+        // Check if IndexedDB already has data - if so, migration already happened
+        const existingKeys = await db.getAllKeys(STORE_NAME);
+        if (existingKeys.length > 0) {
+            console.log('IndexedDB already has data, skipping migration');
+            // Clean up localStorage since migration was already done
+            localStorage.removeItem("calendar");
+            return false;
+        }
+
         const obj = JSON.parse(stored) as Record<string, Array<{
             identifier: string;
             start: string | Date;
             end: string | Date | null;
             msg: string;
         }>>;
-        const db = await getDB();
         
         // Start a transaction to write all data
         const tx = db.transaction(STORE_NAME, 'readwrite');

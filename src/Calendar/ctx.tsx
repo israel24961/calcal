@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
-import { getAllIntervals, saveIntervals, deleteIntervals, migrateFromLocalStorage } from './db';
+import { getAllIntervals, saveAllIntervals, migrateFromLocalStorage } from './db';
 
 export interface DateInterval {
     identifier: string;
@@ -72,19 +72,8 @@ export const CalendarProvider = ({ children }: any) => {
 
         const saveCalendar = async () => {
             try {
-                // Save each date's intervals to IndexedDB
-                const promises: Promise<void>[] = [];
-                
-                calendar.forEach((intervals, dateKey) => {
-                    if (intervals.length > 0) {
-                        promises.push(saveIntervals(dateKey, intervals));
-                    } else {
-                        // If no intervals for this date, delete the entry
-                        promises.push(deleteIntervals(dateKey));
-                    }
-                });
-                
-                await Promise.all(promises);
+                // Save all intervals in a single transaction
+                await saveAllIntervals(calendar);
                 console.log('Calendar saved to IndexedDB');
             } catch (e) {
                 console.error('Failed to save calendar to IndexedDB', e);
