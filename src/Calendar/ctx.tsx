@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import { getAllIntervals, saveIntervals, deleteIntervals, migrateFromLocalStorage } from './db';
 
 export interface DateInterval {
     identifier: string;
@@ -38,50 +39,60 @@ export const CalendarContext = createContext<CalendarContextType>({
     setShowingDate: () => { },
 })
 
-function mapToObj(map: Map<string, DateInterval[]>): Record<string, DateInterval[]> {
-    return Object.fromEntries(map.entries());
-}
-
-function objToMap(obj: Record<string, DateInterval[]>): Map<string, DateInterval[]> {
-    const map = new Map<string, DateInterval[]>();
-    for (const key in obj) {
-        const intervals = obj[key].map(interval => ({
-            ...interval,
-            start: new Date(interval.start),
-            end: interval.end ? new Date(interval.end) : null,
-        }));
-        map.set(key, intervals);
-    }
-    return map;
-}
-
 export const CalendarProvider = ({ children }: any) => {
-    const [calendar, setCalendar] = useState<Map<string, DateInterval[]>>(
-        () => {
-            const stored = localStorage.getItem("calendar");
-            if (stored) {
-                try {
-                    return objToMap(JSON.parse(stored));
-                } catch (e) {
-                    console.warn("Failed to parse calendar from localStorage", e);
-                }
-            }
-            return new Map<string, DateInterval[]>();
-        });
+    const [calendar, setCalendar] = useState<Map<string, DateInterval[]>>(new Map());
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Load calendar from IndexedDB on mount
     useEffect(() => {
-        // Save calendar to localStorage whenever it changes
-        const saveCalendar = () => {
+        const loadCalendar = async () => {
             try {
-                localStorage.setItem("calendar", JSON.stringify(mapToObj(calendar)));
-                console.log('Calendar saved to localStorage');
+                // First, try to migrate data from localStorage if it exists
+                await migrateFromLocalStorage();
+                
+                // Then load all data from IndexedDB
+                const data = await getAllIntervals();
+                setCalendar(data);
+                console.log('Calendar loaded from IndexedDB');
             } catch (e) {
-                console.error('Failed to save calendar to localStorage', e);
+                console.error('Failed to load calendar from IndexedDB', e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadCalendar();
+    }, []);
+
+    // Save calendar to IndexedDB whenever it changes
+    useEffect(() => {
+        if (isLoading) {
+            return; // Don't save during initial load
+        }
+
+        const saveCalendar = async () => {
+            try {
+                // Save each date's intervals to IndexedDB
+                const promises: Promise<void>[] = [];
+                
+                calendar.forEach((intervals, dateKey) => {
+                    if (intervals.length > 0) {
+                        promises.push(saveIntervals(dateKey, intervals));
+                    } else {
+                        // If no intervals for this date, delete the entry
+                        promises.push(deleteIntervals(dateKey));
+                    }
+                });
+                
+                await Promise.all(promises);
+                console.log('Calendar saved to IndexedDB');
+            } catch (e) {
+                console.error('Failed to save calendar to IndexedDB', e);
             }
         };
 
         saveCalendar();
-
-    }, [calendar]);
+    }, [calendar, isLoading]);
 
     const [isStopLastIntervalOnAdd, setIsStopLastIntervalOnAdd] = useState<boolean>(true);
     const [descriptions, setDescriptions] = useState<string[]>([]);
