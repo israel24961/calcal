@@ -52,7 +52,7 @@ function PastDatesCalendar(): JSX.Element {
                         }}
                         title={intervals.every(interval => interval.end) ? 'All intervals ended' : 'There are active intervals'}
                     >
-                    <span>{date.toDateString()} ({intervals.length} intervals)</span>
+                        <span>{date.toDateString()} ({intervals.length} intervals)</span>
                     </button>
                 </li>;
             })}
@@ -277,7 +277,8 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
-                        setIntervalState(interval);
+                        // Save interval edited into the context
+                        calendarContext.updateInterval(interval);
                         return interval.identifier;
                     }}
                     onStoppedEditing={(_) => {
@@ -313,11 +314,17 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
 }
 function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (interval: DateInterval) => string, onStoppedEditing: (identifier: string) => void, onCancel: () => void }): JSX.Element {
     const node = useRef<HTMLDivElement>(null);
+    const [tempInterval, setTempInterval] = useState<DateInterval>(props.interval)
     const calendarContext = useContext(CalendarContext);
+    console.log(props.interval, "interval in oneedit");
+    useEffect(() => {
+        setTempInterval(props.interval);
+    }, [props.interval]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (node && node.current && !node.current.contains(event.target as Node)) {
+                props.onSave(tempInterval);
                 props.onStoppedEditing(props.interval.identifier);
             }
         }
@@ -338,8 +345,8 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
     const [descriptOptions, setDescriptOptions] = useState<string[]>();
 
-    const handleDescriptionSelect = () => {
-        const descriptions = calendarContext.getDescriptions();
+    const handleDescriptionSelect = async () => {
+        const descriptions = await calendarContext.getDescriptions();
         if (descriptions.length > 0) {
             setDescriptOptions(descriptions);
         } else {
@@ -349,8 +356,9 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
     const handleChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const value = e.target.value;
-        props.onSave({ ...props.interval, msg: value });
-        // setIntervalState(prev => ({...prev, msg: value }));
+        const newInterval = { ...tempInterval, msg: value };
+        setTempInterval(newInterval);
+        props.onSave(newInterval);
     };
 
 
@@ -361,25 +369,24 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
                 props.onStoppedEditing(identifier);
             }
         }} >
-        Start: <EditableDateInHoursMinutes date={props.interval.start} canBeEmpty={false}
+        Start: <EditableDateInHoursMinutes date={tempInterval.start} canBeEmpty={false}
             onChange={(date) => {
                 if (!date) {
                     alert('Start date is required');
                     return;
                 }
-                const newInterval = { ...props.interval, start: date };
-                props.onSave(newInterval);
+                const newInterval = { ...tempInterval, start: date };
+                setTempInterval(newInterval);
             }} /> End:
-        <EditableDateInHoursMinutes date={props.interval.end || null} onChange={(date) => {
-            const newInterval = { ...props.interval, end: date };
-            props.onSave(newInterval);
+        <EditableDateInHoursMinutes date={tempInterval.end || null} onChange={(date) => {
+            const newInterval = { ...tempInterval, end: date };
+            setTempInterval(newInterval);
         }} canBeEmpty={true} />
         <input className="msg" style={{ marginLeft: '10px', padding: '5px' }}
-            type="text" value={props.interval.msg || ''}
+            type="text" value={tempInterval.msg || ''}
             onChange={(e) => {
-                const newInterval = { ...props.interval, msg: e.target.value };
-                calendarContext.updateInterval(newInterval);
-                props.onSave(newInterval);
+                const newInterval = { ...tempInterval, msg: e.target.value };
+                setTempInterval(newInterval);
             }} />
         <select
             className="text-sm"

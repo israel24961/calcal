@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import { getAllIntervals, saveAllIntervals, migrateFromLocalStorage, getAllTags } from './db';
 
 export interface DateInterval {
     identifier: string;
@@ -16,7 +17,7 @@ interface CalendarContextType {
     getIntervals(date: Date): DateInterval[];
     getDates(): Date[];
     deleteInterval(dateInterval: DateInterval): string | null;
-    getDescriptions(): string[];
+    getDescriptions(): Promise<string[]>;
     setIsStopLastIntervalOnAdd(value: boolean): void;
     getIsStopLastIntervalOnAdd(): boolean;
     showingDate: Date;
@@ -31,60 +32,58 @@ export const CalendarContext = createContext<CalendarContextType>({
     updateInterval: () => null,
     resumeInterval: () => null,
     deleteInterval: () => null,
-    getDescriptions: () => [],
+    getDescriptions: async () => [],
     setIsStopLastIntervalOnAdd: () => { },
     getIsStopLastIntervalOnAdd: () => true,
     showingDate: new Date(),
     setShowingDate: () => { },
 })
 
-function mapToObj(map: Map<string, DateInterval[]>): Record<string, DateInterval[]> {
-    return Object.fromEntries(map.entries());
-}
-
-function objToMap(obj: Record<string, DateInterval[]>): Map<string, DateInterval[]> {
-    const map = new Map<string, DateInterval[]>();
-    for (const key in obj) {
-        const intervals = obj[key].map(interval => ({
-            ...interval,
-            start: new Date(interval.start),
-            end: interval.end ? new Date(interval.end) : null,
-        }));
-        map.set(key, intervals);
-    }
-    return map;
-}
-
 export const CalendarProvider = ({ children }: any) => {
-    const [calendar, setCalendar] = useState<Map<string, DateInterval[]>>(
-        () => {
-            const stored = localStorage.getItem("calendar");
-            if (stored) {
-                try {
-                    return objToMap(JSON.parse(stored));
-                } catch (e) {
-                    console.warn("Failed to parse calendar from localStorage", e);
-                }
-            }
-            return new Map<string, DateInterval[]>();
-        });
+    const [calendar, setCalendar] = useState<Map<string, DateInterval[]>>(new Map());
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Load calendar from IndexedDB on mount
     useEffect(() => {
-        // Save calendar to localStorage whenever it changes
-        const saveCalendar = () => {
+        const loadCalendar = async () => {
             try {
-                localStorage.setItem("calendar", JSON.stringify(mapToObj(calendar)));
-                console.log('Calendar saved to localStorage');
+                // First, try to migrate data from localStorage if it exists
+                await migrateFromLocalStorage();
+                
+                // Then load all data from IndexedDB
+                const data = await getAllIntervals();
+                setCalendar(data);
+                console.log('Calendar loaded from IndexedDB');
             } catch (e) {
-                console.error('Failed to save calendar to localStorage', e);
+                console.error('Failed to load calendar from IndexedDB', e);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadCalendar();
+    }, []);
+
+    // Save calendar to IndexedDB whenever it changes
+    useEffect(() => {
+        if (isLoading) {
+            return; // Don't save during initial load
+        }
+
+        const saveCalendar = async () => {
+            try {
+                // Save all intervals in a single transaction
+                await saveAllIntervals(calendar);
+                console.log('Calendar saved to IndexedDB');
+            } catch (e) {
+                console.error('Failed to save calendar to IndexedDB', e);
             }
         };
 
         saveCalendar();
-
-    }, [calendar]);
+    }, [calendar, isLoading]);
 
     const [isStopLastIntervalOnAdd, setIsStopLastIntervalOnAdd] = useState<boolean>(true);
-    const [descriptions, setDescriptions] = useState<string[]>([]);
 
     const addIntervalCalendar = (dateInterval: DateInterval) => {
         // Check intervals with null end date
@@ -209,8 +208,15 @@ export const CalendarProvider = ({ children }: any) => {
             }
             return croppedInterval.identifier;
         },
-        getDescriptions: () => {
-            return descriptions.length > 0 ? descriptions : ['No descriptions available'];
+        getDescriptions: async () => {
+            try {
+                const tags = await getAllTags();
+                const tagNames = tags.map(tag => tag.name).filter(name => name);
+                return tagNames.length > 0 ? tagNames.sort() : ['No descriptions available'];
+            } catch (e) {
+                console.error('Failed to get descriptions from database', e);
+                return ['No descriptions available'];
+            }
         },
         deleteInterval: (dateInterval: DateInterval): string | null => {
             if (!dateInterval.start)
@@ -266,16 +272,6 @@ export const CalendarProvider = ({ children }: any) => {
                 return 'Interval not found';
             }
 
-            // Update the descriptions
-            const newDescriptions = existingIntervals.map(interval => interval.msg);
-            // Compare the new descriptions with the existing ones
-            if (JSON.stringify(newDescriptions) !== JSON.stringify(descriptions)) {
-                const uniqueDescriptions = Array.from(new Set(newDescriptions));
-                console.log('Updating descriptions', uniqueDescriptions);
-                uniqueDescriptions.sort();
-
-                setDescriptions(uniqueDescriptions);
-            }
             return croppedInterval.identifier; // Return the identifier of the updated interval
         },
         setIsStopLastIntervalOnAdd: (value: boolean) => {
@@ -316,6 +312,9 @@ function addInterval(ddI: Map<string, DateInterval[]>, dateInterval: DateInterva
     const day = dayD.toDateString()
     dateInterval = cropDayInterval(dateInterval);
 
+    // Random identifier for the interval - set BEFORE adding to map
+    dateInterval.identifier = dateInterval.identifier || Math.random().toString(36).substring(2, 15);
+
     const isDayKey = ddF.has(day);
     if (isDayKey) {
         const dayIntervals = ddF.get(day)!;
@@ -323,9 +322,6 @@ function addInterval(ddI: Map<string, DateInterval[]>, dateInterval: DateInterva
     } else {
         ddF.set(day, [dateInterval]);
     }
-
-    // Random identifier for the interval
-    dateInterval.identifier = dateInterval.identifier || Math.random().toString(36).substring(2, 15);
 
     return ddF;
 }
