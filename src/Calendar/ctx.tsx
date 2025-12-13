@@ -266,7 +266,7 @@ export const CalendarProvider = ({ children }: any) => {
                 return 'Interval not found';
             }
 
-            // Update the descriptions
+            // Use instead the database 
             const newDescriptions = existingIntervals.map(interval => interval.msg);
             // Compare the new descriptions with the existing ones
             if (JSON.stringify(newDescriptions) !== JSON.stringify(descriptions)) {
