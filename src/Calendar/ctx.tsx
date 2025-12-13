@@ -1,5 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
-import { getAllIntervals, saveAllIntervals, migrateFromLocalStorage } from './db';
+import { getAllIntervals, saveAllIntervals, migrateFromLocalStorage, getAllTags } from './db';
 
 export interface DateInterval {
     identifier: string;
@@ -17,7 +17,7 @@ interface CalendarContextType {
     getIntervals(date: Date): DateInterval[];
     getDates(): Date[];
     deleteInterval(dateInterval: DateInterval): string | null;
-    getDescriptions(): string[];
+    getDescriptions(): Promise<string[]>;
     setIsStopLastIntervalOnAdd(value: boolean): void;
     getIsStopLastIntervalOnAdd(): boolean;
     showingDate: Date;
@@ -32,7 +32,7 @@ export const CalendarContext = createContext<CalendarContextType>({
     updateInterval: () => null,
     resumeInterval: () => null,
     deleteInterval: () => null,
-    getDescriptions: () => [],
+    getDescriptions: async () => [],
     setIsStopLastIntervalOnAdd: () => { },
     getIsStopLastIntervalOnAdd: () => true,
     showingDate: new Date(),
@@ -84,7 +84,6 @@ export const CalendarProvider = ({ children }: any) => {
     }, [calendar, isLoading]);
 
     const [isStopLastIntervalOnAdd, setIsStopLastIntervalOnAdd] = useState<boolean>(true);
-    const [descriptions, setDescriptions] = useState<string[]>([]);
 
     const addIntervalCalendar = (dateInterval: DateInterval) => {
         // Check intervals with null end date
@@ -209,8 +208,15 @@ export const CalendarProvider = ({ children }: any) => {
             }
             return croppedInterval.identifier;
         },
-        getDescriptions: () => {
-            return descriptions.length > 0 ? descriptions : ['No descriptions available'];
+        getDescriptions: async () => {
+            try {
+                const tags = await getAllTags();
+                const tagNames = tags.map(tag => tag.name).filter(name => name);
+                return tagNames.length > 0 ? tagNames.sort() : ['No descriptions available'];
+            } catch (e) {
+                console.error('Failed to get descriptions from database', e);
+                return ['No descriptions available'];
+            }
         },
         deleteInterval: (dateInterval: DateInterval): string | null => {
             if (!dateInterval.start)
@@ -266,16 +272,6 @@ export const CalendarProvider = ({ children }: any) => {
                 return 'Interval not found';
             }
 
-            // Use instead the database 
-            const newDescriptions = existingIntervals.map(interval => interval.msg);
-            // Compare the new descriptions with the existing ones
-            if (JSON.stringify(newDescriptions) !== JSON.stringify(descriptions)) {
-                const uniqueDescriptions = Array.from(new Set(newDescriptions));
-                console.log('Updating descriptions', uniqueDescriptions);
-                uniqueDescriptions.sort();
-
-                setDescriptions(uniqueDescriptions);
-            }
             return croppedInterval.identifier; // Return the identifier of the updated interval
         },
         setIsStopLastIntervalOnAdd: (value: boolean) => {

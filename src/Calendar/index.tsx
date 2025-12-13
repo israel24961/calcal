@@ -345,8 +345,8 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
     const [descriptOptions, setDescriptOptions] = useState<string[]>();
 
-    const handleDescriptionSelect = () => {
-        const descriptions = calendarContext.getDescriptions();
+    const handleDescriptionSelect = async () => {
+        const descriptions = await calendarContext.getDescriptions();
         if (descriptions.length > 0) {
             setDescriptOptions(descriptions);
         } else {
@@ -356,8 +356,9 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
     const handleChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const value = e.target.value;
-        const newInterval = { ...props.interval, msg: value };
+        const newInterval = { ...tempInterval, msg: value };
         setTempInterval(newInterval);
+        props.onSave(newInterval);
     };
 
 
