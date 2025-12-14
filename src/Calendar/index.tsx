@@ -403,7 +403,7 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
 function EditableDateInHoursMinutes(props: { date: Date | null, onChange: (date: Date | null) => void, canBeEmpty: boolean }): JSX.Element {
     return <div className="editable-date flex gap-1" >
-        <input type="text" className="flex-grow min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
+        <input type="text" className="min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
             value={props.date ? props.date.getHours() : ''} 
             placeholder="HH"
             onChange={(e) => {
@@ -432,7 +432,7 @@ function EditableDateInHoursMinutes(props: { date: Date | null, onChange: (date:
                 }
             }} min={0} max={23} />
         <span className="self-center">:</span>
-        <input className="flex-grow min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
+        <input className="min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
             type="text" value={props.date ? props.date.getMinutes() : ''}
             placeholder="MM"
             min={0} max={59} onChange={(e) => {
