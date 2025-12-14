@@ -306,9 +306,9 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
             </button>
         </div>
     </div>;
-    const themeWhenEditing = 'bg-yellow-100 text-red-800';
-    // If ended, disabled look
-    const themeWhenNotEditing = intervalState.end ? 'opacity-50 cursor-not-allowed' : '';
+    const themeWhenEditing = 'text-red-800';
+    // If ended, disabled look - using filter for better control than opacity
+    const themeWhenNotEditing = intervalState.end ? 'cursor-not-allowed' : '';
     
     const baseIntervalClasses = 'flex flex-col md:flex-row gap-2 md:gap-4 p-2 border rounded mb-2';
     const editingClasses = `${baseIntervalClasses} ${themeWhenEditing}`;
@@ -316,7 +316,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
 
     return <>
         {isEditing ?
-            <div className={editingClasses} style={{ borderColor: '#dc2626' }}>
+            <div className={editingClasses} style={{ borderColor: '#dc2626', backgroundColor: 'rgba(254, 240, 138, 0.3)' }}>
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
@@ -335,7 +335,10 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     }}
                 />
             </div>
-            : <div className={normalClasses} style={{ borderColor: 'rgba(128, 128, 128, 0.3)' }}>
+            : <div className={normalClasses} style={{ 
+                borderColor: 'rgba(128, 128, 128, 0.3)',
+                filter: intervalState.end ? 'opacity(0.5)' : 'none'
+            }}>
                 <div className="font-semibold text-sm md:text-base" > {humanDuration(elapsedTime || 0)} </div>
                 <div className="interval flex-grow" onClick={() => { setIsEditing(!isEditing); }}>
                     <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : 'No end time'}</p>
