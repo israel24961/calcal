@@ -306,16 +306,17 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
             </button>
         </div>
     </div>;
-    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200 border border-red-500 dark:border-red-300 rounded mb-2 p-2';
+    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200';
     // If ended, disabled look
-    const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 ' +
-        'cursor-not-allowed' : '';
-
-
+    const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed' : '';
+    
+    const baseIntervalClasses = 'flex flex-col md:flex-row gap-2 md:gap-4 p-2 border rounded mb-2';
+    const editingClasses = `${baseIntervalClasses} ${themeWhenEditing} border-red-500 dark:border-red-300 bg-yellow-100 dark:bg-yellow-800`;
+    const normalClasses = `${baseIntervalClasses} ${themeWhenNotEditing} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800`;
 
     return <>
         {isEditing ?
-            <div className={`${themeWhenEditing}`}>
+            <div className={editingClasses}>
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
@@ -334,7 +335,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     }}
                 />
             </div>
-            : <div className={`flex flex-col md:flex-row gap-2 md:gap-4 ${isEditing ? themeWhenEditing : themeWhenNotEditing} p-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-800`}>
+            : <div className={normalClasses}>
                 <div className="font-semibold text-sm md:text-base" > {humanDuration(elapsedTime || 0)} </div>
                 <div className="interval flex-grow" onClick={() => { setIsEditing(!isEditing); }}>
                     <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : 'No end time'}</p>
