@@ -72,12 +72,50 @@ function PastDatesCalendar(): JSX.Element {
 
 
 export function Calendar(): JSX.Element {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     return <div className="calendar">
         <h2>Calendar</h2>
-        <div className="flex flex-col md:flex-row min-h-screen">
-            <aside className="w-full md:w-64 bg-gray-800 text-white p-2 md:p-4">
+        <div className="flex flex-col md:flex-row min-h-screen relative">
+            {/* Hamburger button - only visible on mobile */}
+            <button
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-label="Toggle menu"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                    {isSidebarOpen ? (
+                        // X icon when open
+                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                    ) : (
+                        // Hamburger icon when closed
+                        <path d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                    )}
+                </svg>
+            </button>
+
+            {/* Sidebar - hidden by default on mobile, always visible on desktop */}
+            <aside className={`
+                ${isSidebarOpen ? 'block' : 'hidden'} md:block
+                fixed md:relative
+                top-0 left-0
+                w-full md:w-64
+                h-full md:h-auto
+                bg-gray-800 text-white
+                p-2 md:p-4
+                z-40
+                overflow-y-auto
+            `}>
                 <PastDatesCalendar />
             </aside>
+
+            {/* Overlay for mobile when sidebar is open */}
+            {isSidebarOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
 
             <CalendarIntervalRepresentations />
         </div>
@@ -326,8 +364,10 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
         }
     }, [props.interval]);
 
-    useEffect(() => { // Focus on the first input when editing starts
-        if (node && node.current) {
+    useEffect(() => { // Focus on the first input when editing starts (only on desktop)
+        // Check if device is mobile based on screen width
+        const isMobile = window.innerWidth < 768;
+        if (!isMobile && node && node.current) {
             const inputs = node.current.querySelectorAll('input');
             if (inputs.length > 0) {
                 (inputs[0] as HTMLInputElement).focus();
