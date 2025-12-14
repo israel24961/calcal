@@ -239,9 +239,9 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
         ? (intervalState.end.getTime() - intervalState.start.getTime()) / 1000
         : (new Date().getTime() - intervalState.start.getTime()) / 1000;
 
-    const interval_container = 'flex flex-col md:flex-row items-start md:items-center justify-between p-2 gap-2 border border-gray-300 dark:border-gray-600 rounded mb-2 bg-white dark:bg-gray-800 ';
+    const interval_container = 'flex flex-col md:flex-row items-start md:items-center justify-between p-2 gap-2 border rounded mb-2';
     if (props.readonly)
-        return <div className={interval_container}>
+        return <div className={interval_container} style={{ borderColor: 'rgba(128, 128, 128, 0.3)' }}>
             <div className="interval-duration font-semibold" > {humanDuration(elapsedTime || 0)} </div>
             <div className="interval">
                 <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
@@ -306,17 +306,17 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
             </button>
         </div>
     </div>;
-    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200';
+    const themeWhenEditing = 'bg-yellow-100 text-red-800';
     // If ended, disabled look
-    const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 cursor-not-allowed' : '';
+    const themeWhenNotEditing = intervalState.end ? 'opacity-50 cursor-not-allowed' : '';
     
     const baseIntervalClasses = 'flex flex-col md:flex-row gap-2 md:gap-4 p-2 border rounded mb-2';
-    const editingClasses = `${baseIntervalClasses} ${themeWhenEditing} border-red-500 dark:border-red-300 bg-yellow-100 dark:bg-yellow-800`;
-    const normalClasses = `${baseIntervalClasses} ${themeWhenNotEditing} border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800`;
+    const editingClasses = `${baseIntervalClasses} ${themeWhenEditing}`;
+    const normalClasses = `${baseIntervalClasses} ${themeWhenNotEditing}`;
 
     return <>
         {isEditing ?
-            <div className={editingClasses}>
+            <div className={editingClasses} style={{ borderColor: '#dc2626' }}>
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
@@ -335,7 +335,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     }}
                 />
             </div>
-            : <div className={normalClasses}>
+            : <div className={normalClasses} style={{ borderColor: 'rgba(128, 128, 128, 0.3)' }}>
                 <div className="font-semibold text-sm md:text-base" > {humanDuration(elapsedTime || 0)} </div>
                 <div className="interval flex-grow" onClick={() => { setIsEditing(!isEditing); }}>
                     <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : 'No end time'}</p>
