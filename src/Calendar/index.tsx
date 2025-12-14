@@ -243,7 +243,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
     if (props.readonly)
         return <div className={interval_container}>
             <div className="interval-duration font-semibold" > {humanDuration(elapsedTime || 0)} </div>
-            <div className="interval" onClick={() => { setIsEditing(!isEditing); }}>
+            <div className="interval">
                 <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
             </div>
         </div>
@@ -306,7 +306,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
             </button>
         </div>
     </div>;
-    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200 border-red-500 dark:border-red-300';
+    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200 border border-red-500 dark:border-red-300 rounded mb-2 p-2';
     // If ended, disabled look
     const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 ' +
         'cursor-not-allowed' : '';
@@ -315,7 +315,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
 
     return <>
         {isEditing ?
-            <div className={`${themeWhenEditing} border border-red-500 dark:border-red-300 rounded mb-2 p-2`}>
+            <div className={`${themeWhenEditing}`}>
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
