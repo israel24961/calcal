@@ -2,6 +2,9 @@ import { JSX, useContext, useEffect, useRef, useState } from 'react';
 import { CalendarContext, DateInterval } from './ctx';
 import { intervalToDuration } from 'date-fns';
 
+// Responsive breakpoint - matches UnoCSS 'md:' prefix
+const MOBILE_BREAKPOINT = '(max-width: 767px)';
+
 function humanDuration(time: number): string {
     if (time < 60) return time.toFixed(0) + 's';
 
@@ -41,12 +44,12 @@ function PastDatesCalendar(): JSX.Element {
 
 
     return <div>
-        <h3> Past dates </h3>
-        <ul className="past-dates-list list-none pl-5">
+        <h3 className="text-base md:text-lg mb-2"> Past dates </h3>
+        <ul className="past-dates-list list-none pl-0 md:pl-5">
             {pastDates.map((date, index) => {
                 const intervals = calendarContext.getIntervals(date);
-                return <li key={index}>
-                    <button className={`date-button ${(intervals.every(interval => interval.end)) ? 'text-gray-400' : 'text-white bg-gray-600'}`}
+                return <li key={index} className="mb-1">
+                    <button className={`date-button w-full text-left px-2 py-2 rounded text-sm md:text-base ${(intervals.every(interval => interval.end)) ? 'text-gray-400' : 'text-white bg-gray-600'}`}
                         onClick={() => {
                             calendarContext.setShowingDate(date);
                         }}
@@ -56,8 +59,8 @@ function PastDatesCalendar(): JSX.Element {
                     </button>
                 </li>;
             })}
-            <li>
-                <button className="load-more-button text-blue-500"
+            <li className="mt-2">
+                <button className="load-more-button text-blue-500 w-full text-left px-2 py-2 text-sm md:text-base"
                     onClick={() => {
                         showingResults.current += 5;
                         // Force re-render
@@ -72,12 +75,52 @@ function PastDatesCalendar(): JSX.Element {
 
 
 export function Calendar(): JSX.Element {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    const sidebarClasses = `
+        ${isSidebarOpen ? 'block' : 'hidden'} md:block
+        fixed md:relative
+        top-0 left-0
+        w-full md:w-64
+        h-full md:h-auto
+        bg-gray-800 text-white
+        p-2 md:p-4
+        z-40
+        overflow-y-auto
+    `;
+
     return <div className="calendar">
         <h2>Calendar</h2>
-        <div className="flex min-h-screen">
-            <aside className="w-64 bg-gray-800 text-white p-4">
+        <div className="flex flex-col md:flex-row min-h-screen relative">
+            {/* Hamburger button - only visible on mobile */}
+            <button
+                className="md:hidden fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                aria-label="Toggle menu"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                    {isSidebarOpen ? (
+                        // X icon when open
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                    ) : (
+                        // Hamburger icon when closed
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                    )}
+                </svg>
+            </button>
+
+            {/* Sidebar - hidden by default on mobile, always visible on desktop */}
+            <aside className={sidebarClasses}>
                 <PastDatesCalendar />
             </aside>
+
+            {/* Overlay for mobile when sidebar is open */}
+            {isSidebarOpen && (
+                <div
+                    className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
 
             <CalendarIntervalRepresentations />
         </div>
@@ -120,24 +163,24 @@ function CalendarIntervalRepresentations(): JSX.Element {
     }, []);
     console.log('Current date:', curDate.toLocaleString(), 'Intervals:', intervals);
 
-    return <div className="today-intervals">
+    return <div className="today-intervals px-2 md:px-4">
         {calendarContext.showingDate.toDateString() === curDate.toDateString() ?
-            <h3>Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')} - (Total time: {
+            <h3 className="text-base md:text-lg">Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')} - (Total time: {
                 humanDuration(intervals.reduce((acc, interval) => {
                     const elapsed = interval.end ? (interval.end.getTime() - interval.start.getTime()) / 1000 : (new Date().getTime() - interval.start.getTime()) / 1000;
                     return acc + (elapsed || 0);
                 }, 0))
             })
             </h3> :
-            <h3> Historic Intervals for {calendarContext.showingDate.toDateString()} ({intervals.length})</h3>
+            <h3 className="text-base md:text-lg"> Historic Intervals for {calendarContext.showingDate.toDateString()} ({intervals.length})</h3>
         }
-        <button onClick={() => {
+        <button className="text-sm md:text-base mb-2" onClick={() => {
             calendarContext.setIsStopLastIntervalOnAdd(!calendarContext.getIsStopLastIntervalOnAdd());
         }}
             title={`Toggle allowing only one interval to run at a time. Currently: ${calendarContext.getIsStopLastIntervalOnAdd() ? 'Only one allowed' : 'Multiple allowed'}`}
         > {calendarContext.getIsStopLastIntervalOnAdd() ? 'Allowing only one to run' : 'Allowing multiple to run'} </button>
         <CalendarIntervals intervals={intervals} minimized={false} />
-        <button className="mouse" onClick={() => {
+        <button className="mouse text-sm md:text-base mt-2" onClick={() => {
             console.log('Adding interval');
             calendarContext.addInterval({} as DateInterval);
         }} > Add Interval</button>
@@ -196,12 +239,12 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
         ? (intervalState.end.getTime() - intervalState.start.getTime()) / 1000
         : (new Date().getTime() - intervalState.start.getTime()) / 1000;
 
-    const interval_container = 'flex flex-row items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 ';
+    const interval_container = 'flex flex-col md:flex-row items-start md:items-center justify-between p-2 gap-2 border rounded mb-2';
     if (props.readonly)
-        return <div className={interval_container}>
-            <div className="interval-duration" > {humanDuration(elapsedTime || 0)} </div>
-            <div className="interval" onClick={() => { setIsEditing(!isEditing); }}>
-                <p>{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
+        return <div className={interval_container} style={{ borderColor: 'rgba(128, 128, 128, 0.3)' }}>
+            <div className="interval-duration font-semibold" > {humanDuration(elapsedTime || 0)} </div>
+            <div className="interval">
+                <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
             </div>
         </div>
 
@@ -210,9 +253,9 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
     useEffect(() => {
         setIntervalState(props.interval);
     }, [props.interval]);
-    const CrudIcons = () => <div className="flex flex-row items-center justify-center">
-        <div className="flex flex-col items-center justify-center">
-            <button className="play" style={{ marginLeft: '10px', padding: '5px' }}
+    const CrudIcons = () => <div className="flex flex-row items-center justify-center gap-1 md:gap-0">
+        <div className="flex flex-row md:flex-col items-center justify-center">
+            <button className="play p-1 md:p-1.5"
                 title="Resume Interval (if last interval)"
                 onClick={() => {
                     console.log('Stopping interval', intervalState);
@@ -220,11 +263,11 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     if (!identifier)
                         console.log('Interval stopped', identifier);
                 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-play" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-play" viewBox="0 0 16 16">
                     <path d="M11.596 8.697L5.223 12.61A1 1 0 0 1 4 11.618V4.382a1 1 0 0 1 1.223-.992l6.373 3.913a1 1 0 0 1 0 1.992zM5.5 5.382v5.236l5.373-2.618L5.5 5.382z" />
                 </svg>
             </button>
-            <button className="stop" style={{ marginLeft: '10px', padding: '5px' }}
+            <button className="stop p-1 md:p-1.5"
                 title="Stop Interval"
                 onClick={() => {
                     console.log('Stopping interval', intervalState);
@@ -232,25 +275,24 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     if (!identifier)
                         console.log('Interval stopped', identifier);
                 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-stop" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-stop" viewBox="0 0 16 16">
                     <path d="M3 3h10v10H3V3zm1 1v8h8V4H4z" />
                 </svg>
             </button>
         </div>
-        <div className="flex flex-col items-center justify-center">
-            <button className="edit"
+        <div className="flex flex-row md:flex-col items-center justify-center">
+            <button className="edit p-1 md:p-1.5"
                 title="Edit Interval"
-                style={{ marginLeft: '10px', padding: '5px' }}
                 onClick={() => {
                     console.log('Editing interval', intervalState);
                     setIsEditing(true);
                 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill={`${intervalState.end ? 'gray' : 'currentColor'}`}
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill={`${intervalState.end ? 'gray' : 'currentColor'}`}
                     className="bi bi-pencil-square" viewBox="0 0 16 16">
                     <path d="M15.502 1.94a1.5 1.5 0 0 0-2.12 0l-1.415 1.414a1.5 1.5 0 0 0 0 2.121l2.121 2.121a1.5 1.5 0 0 0 2.121 0l1.414-1.414a1.5 1.5 0 0 0 0-2.121L15.502 1.94zM13.88 4.06L11.76 6.18l-2-2L11.88 2a1.5 1.5 0 0 1 .212-.212l1.414-1.414a1.5 1.5 0 0 1 .212-.212l-.212-.212zM14.5 16H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h8a2 2 0 0 1 .707.293l3.5 3.5A2 2 0 0 1 14.5 6v8a2 2 0 0 1-2 .707V16zM3 .5A2.5 2.5 0 0 0 .5 3v10a2.5 2.5 0 0 0 .146.854L3 .854V16h11V6H4V3H3v-.5z" />
                 </svg>
             </button>
-            <button className="delete" style={{ marginLeft: '10px', padding: '5px' }}
+            <button className="delete p-1 md:p-1.5"
                 title="Delete Interval"
                 onClick={() => {
                     console.log('Deleting interval', intervalState);
@@ -258,22 +300,23 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     if (!identifier)
                         console.log('Interval deleted', identifier);
                 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-trash" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill={`${intervalState.end ? 'gray' : 'currentColor'}`} className="bi bi-trash" viewBox="0 0 16 16">
                     <path d="M5.5 5.5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-.5.5h-4a.5.5 0 0 1-.5-.5v-6zM14 3H2v1h12V3zm-1-2H3a1 1 0 0 0-1 1v1h12V2a1 1 0 0 0-1-1zM3.118 4L2.39 14.39A2 2 0 0 0 4.39 16h7.22a2 2 0 0 0 2-1.61L12.882 4H3.118z" />
                 </svg>
             </button>
         </div>
     </div>;
-    const themeWhenEditing = 'bg-yellow-100 dark:bg-yellow-800 text-red-800 dark:text-red-200 border-red-500 dark:border-red-300';
-    // If ended, disabled look
-    const themeWhenNotEditing = intervalState.end ? 'text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 ' +
-        'cursor-not-allowed' : '';
-
-
+    const themeWhenEditing = 'text-red-800';
+    // If ended, disabled look - using filter for better control than opacity
+    const themeWhenNotEditing = intervalState.end ? 'cursor-not-allowed' : '';
+    
+    const baseIntervalClasses = 'flex flex-col md:flex-row gap-2 md:gap-4 p-2 border rounded mb-2';
+    const editingClasses = `${baseIntervalClasses} ${themeWhenEditing}`;
+    const normalClasses = `${baseIntervalClasses} ${themeWhenNotEditing}`;
 
     return <>
         {isEditing ?
-            <div className={`${themeWhenEditing}`}>
+            <div className={editingClasses} style={{ borderColor: '#dc2626', backgroundColor: 'rgba(254, 240, 138, 0.3)' }}>
                 <CalendarOneIntervalEdit interval={intervalState}
                     onSave={(interval) => {
                         console.log('Saving start HH:mm', interval.start.toLocaleTimeString(), 'end HH:mm', interval.end ? interval.end.toLocaleTimeString() : 'No end time');
@@ -292,17 +335,20 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     }}
                 />
             </div>
-            : <div className={`flex flex-row ${isEditing ? themeWhenEditing : themeWhenNotEditing} `}>
-                <div > {humanDuration(elapsedTime || 0)} </div>
-                <div className="interval" onClick={() => { setIsEditing(!isEditing); }}>
-                    <p>{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString() : 'No end time'}</p>
+            : <div className={normalClasses} style={{ 
+                borderColor: 'rgba(128, 128, 128, 0.3)',
+                filter: intervalState.end ? 'opacity(0.5)' : 'none'
+            }}>
+                <div className="font-semibold text-sm md:text-base" > {humanDuration(elapsedTime || 0)} </div>
+                <div className="interval flex-grow" onClick={() => { setIsEditing(!isEditing); }}>
+                    <p className="text-sm md:text-base">{intervalState.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -- {intervalState.end ? intervalState.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : 'No end time'}</p>
                 </div>
                 <CrudIcons />
-                <div>
+                <div className="w-full md:w-auto">
                     {intervalState.msg && intervalState.msg.length > 0 &&
                         <span
                             style={{ backgroundColor: msgColorLabel }}
-                            className='inline-flex items-center rounded-md  px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/10 ring-inset'>
+                            className='inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/10 ring-inset break-words'>
                             {intervalState.msg}
                         </span>
                     }
@@ -327,8 +373,10 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
         }
     }, [props.interval]);
 
-    useEffect(() => { // Focus on the first input when editing starts
-        if (node && node.current) {
+    useEffect(() => { // Focus on the first input when editing starts (only on desktop)
+        // Check if device is mobile using matchMedia for better performance
+        const isMobile = window.matchMedia(MOBILE_BREAKPOINT).matches;
+        if (!isMobile && node && node.current) {
             const inputs = node.current.querySelectorAll('input');
             if (inputs.length > 0) {
                 (inputs[0] as HTMLInputElement).focus();
@@ -354,35 +402,42 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
     };
 
 
-    return <div className="interval-edit" style={{ display: 'flex', flexDirection: 'row', gap: '10px' }} ref={node}
+    return <div className="interval-edit flex flex-col md:flex-row gap-2 md:gap-3 p-2" ref={node}
         onKeyDown={(e) => {
             if (e.key === 'Enter') {
                 const identifier = props.onSave(props.interval);
                 props.onStoppedEditing(identifier);
             }
         }} >
-        Start: <EditableDateInHoursMinutes date={props.interval.start} canBeEmpty={false}
-            onChange={(date) => {
-                if (!date) {
-                    alert('Start date is required');
-                    return;
-                }
-                const newInterval = { ...props.interval, start: date };
+        <div className="flex items-center gap-1">
+            <span className="text-sm">Start:</span>
+            <EditableDateInHoursMinutes date={props.interval.start} canBeEmpty={false}
+                onChange={(date) => {
+                    if (!date) {
+                        alert('Start date is required');
+                        return;
+                    }
+                    const newInterval = { ...props.interval, start: date };
+                    props.onSave(newInterval);
+                }} />
+        </div>
+        <div className="flex items-center gap-1">
+            <span className="text-sm">End:</span>
+            <EditableDateInHoursMinutes date={props.interval.end || null} onChange={(date) => {
+                const newInterval = { ...props.interval, end: date };
                 props.onSave(newInterval);
-            }} /> End:
-        <EditableDateInHoursMinutes date={props.interval.end || null} onChange={(date) => {
-            const newInterval = { ...props.interval, end: date };
-            props.onSave(newInterval);
-        }} canBeEmpty={true} />
-        <input className="msg" style={{ marginLeft: '10px', padding: '5px' }}
+            }} canBeEmpty={true} />
+        </div>
+        <input className="msg flex-grow px-2 py-1 text-sm border rounded min-w-0"
             type="text" value={props.interval.msg || ''}
+            placeholder="Description"
             onChange={(e) => {
                 const newInterval = { ...props.interval, msg: e.target.value };
                 calendarContext.updateInterval(newInterval);
                 props.onSave(newInterval);
             }} />
         <select
-            className="text-sm"
+            className="text-sm px-2 py-1 border rounded min-w-0"
             onMouseDown={handleDescriptionSelect}
             onChange={handleChangeSelect}
             value={''}
@@ -396,9 +451,11 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 }
 
 function EditableDateInHoursMinutes(props: { date: Date | null, onChange: (date: Date | null) => void, canBeEmpty: boolean }): JSX.Element {
-    return <div className="editable-date" >
-        <input type="text" className="flex-grow min-w-[5em] px-1 py-0.5 border rounded"
-            value={props.date ? props.date.getHours() : ''} onChange={(e) => {
+    return <div className="editable-date flex gap-1" >
+        <input type="text" className="min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
+            value={props.date ? props.date.getHours() : ''} 
+            placeholder="HH"
+            onChange={(e) => {
                 const newDate = new Date(props.date ? props.date : new Date());
                 if (!e.target.value || e.target.value === '') {
                     if (props.canBeEmpty) {
@@ -422,10 +479,12 @@ function EditableDateInHoursMinutes(props: { date: Date | null, onChange: (date:
                     newDate.setHours(parseInt(e.target.value));
                     props.onChange(newDate);
                 }
-            }} min={0} max={23} size={2} />
-        <input className="flex-grow min-w-[2em] px-1 py-0.5 border rounded"
+            }} min={0} max={23} />
+        <span className="self-center">:</span>
+        <input className="min-w-[3em] w-12 px-2 py-1 border rounded text-sm"
             type="text" value={props.date ? props.date.getMinutes() : ''}
-            min={0} max={59} size={2} onChange={(e) => {
+            placeholder="MM"
+            min={0} max={59} onChange={(e) => {
                 const newDate = new Date(props.date ? props.date : new Date());
                 if (!e.target.value || e.target.value === '') {
                     console.log("Minutes changed to", newDate.getMinutes());
