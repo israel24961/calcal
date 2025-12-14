@@ -83,13 +83,13 @@ export function Calendar(): JSX.Element {
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 aria-label="Toggle menu"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
                     {isSidebarOpen ? (
                         // X icon when open
-                        <path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                     ) : (
                         // Hamburger icon when closed
-                        <path d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/>
+                        <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
                     )}
                 </svg>
             </button>
@@ -365,8 +365,8 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
     }, [props.interval]);
 
     useEffect(() => { // Focus on the first input when editing starts (only on desktop)
-        // Check if device is mobile based on screen width
-        const isMobile = window.innerWidth < 768;
+        // Check if device is mobile using matchMedia for better performance
+        const isMobile = window.matchMedia('(max-width: 767px)').matches;
         if (!isMobile && node && node.current) {
             const inputs = node.current.querySelectorAll('input');
             if (inputs.length > 0) {
