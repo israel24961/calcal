@@ -2,6 +2,9 @@ import { JSX, useContext, useEffect, useRef, useState } from 'react';
 import { CalendarContext, DateInterval } from './ctx';
 import { intervalToDuration } from 'date-fns';
 
+// Responsive breakpoint - matches UnoCSS 'md:' prefix
+const MOBILE_BREAKPOINT = '(max-width: 767px)';
+
 function humanDuration(time: number): string {
     if (time < 60) return time.toFixed(0) + 's';
 
@@ -74,6 +77,18 @@ function PastDatesCalendar(): JSX.Element {
 export function Calendar(): JSX.Element {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+    const sidebarClasses = `
+        ${isSidebarOpen ? 'block' : 'hidden'} md:block
+        fixed md:relative
+        top-0 left-0
+        w-full md:w-64
+        h-full md:h-auto
+        bg-gray-800 text-white
+        p-2 md:p-4
+        z-40
+        overflow-y-auto
+    `;
+
     return <div className="calendar">
         <h2>Calendar</h2>
         <div className="flex flex-col md:flex-row min-h-screen relative">
@@ -95,17 +110,7 @@ export function Calendar(): JSX.Element {
             </button>
 
             {/* Sidebar - hidden by default on mobile, always visible on desktop */}
-            <aside className={`
-                ${isSidebarOpen ? 'block' : 'hidden'} md:block
-                fixed md:relative
-                top-0 left-0
-                w-full md:w-64
-                h-full md:h-auto
-                bg-gray-800 text-white
-                p-2 md:p-4
-                z-40
-                overflow-y-auto
-            `}>
+            <aside className={sidebarClasses}>
                 <PastDatesCalendar />
             </aside>
 
@@ -366,7 +371,7 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
 
     useEffect(() => { // Focus on the first input when editing starts (only on desktop)
         // Check if device is mobile using matchMedia for better performance
-        const isMobile = window.matchMedia('(max-width: 767px)').matches;
+        const isMobile = window.matchMedia(MOBILE_BREAKPOINT).matches;
         if (!isMobile && node && node.current) {
             const inputs = node.current.querySelectorAll('input');
             if (inputs.length > 0) {
