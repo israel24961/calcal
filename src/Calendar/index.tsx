@@ -212,7 +212,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
     }, [props.interval]);
     const CrudIcons = () => <div className="flex flex-row items-center justify-center gap-1 md:gap-0">
         <div className="flex flex-row md:flex-col items-center justify-center">
-            <button className="play p-1 md:p-1.5" style={{ marginLeft: '10px', padding: '5px' }}
+            <button className="play p-1 md:p-1.5"
                 title="Resume Interval (if last interval)"
                 onClick={() => {
                     console.log('Stopping interval', intervalState);
@@ -224,7 +224,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     <path d="M11.596 8.697L5.223 12.61A1 1 0 0 1 4 11.618V4.382a1 1 0 0 1 1.223-.992l6.373 3.913a1 1 0 0 1 0 1.992zM5.5 5.382v5.236l5.373-2.618L5.5 5.382z" />
                 </svg>
             </button>
-            <button className="stop p-1 md:p-1.5" style={{ marginLeft: '10px', padding: '5px' }}
+            <button className="stop p-1 md:p-1.5"
                 title="Stop Interval"
                 onClick={() => {
                     console.log('Stopping interval', intervalState);
@@ -240,7 +240,6 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
         <div className="flex flex-row md:flex-col items-center justify-center">
             <button className="edit p-1 md:p-1.5"
                 title="Edit Interval"
-                style={{ marginLeft: '10px', padding: '5px' }}
                 onClick={() => {
                     console.log('Editing interval', intervalState);
                     setIsEditing(true);
@@ -250,7 +249,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     <path d="M15.502 1.94a1.5 1.5 0 0 0-2.12 0l-1.415 1.414a1.5 1.5 0 0 0 0 2.121l2.121 2.121a1.5 1.5 0 0 0 2.121 0l1.414-1.414a1.5 1.5 0 0 0 0-2.121L15.502 1.94zM13.88 4.06L11.76 6.18l-2-2L11.88 2a1.5 1.5 0 0 1 .212-.212l1.414-1.414a1.5 1.5 0 0 1 .212-.212l-.212-.212zM14.5 16H3a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h8a2 2 0 0 1 .707.293l3.5 3.5A2 2 0 0 1 14.5 6v8a2 2 0 0 1-2 .707V16zM3 .5A2.5 2.5 0 0 0 .5 3v10a2.5 2.5 0 0 0 .146.854L3 .854V16h11V6H4V3H3v-.5z" />
                 </svg>
             </button>
-            <button className="delete p-1 md:p-1.5" style={{ marginLeft: '10px', padding: '5px' }}
+            <button className="delete p-1 md:p-1.5"
                 title="Delete Interval"
                 onClick={() => {
                     console.log('Deleting interval', intervalState);
