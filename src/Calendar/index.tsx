@@ -301,7 +301,7 @@ function CalendarOneInterval(props: { interval: DateInterval, key: number, reado
                     {intervalState.msg && intervalState.msg.length > 0 &&
                         <span
                             style={{ backgroundColor: msgColorLabel }}
-                            className='inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/10 ring-inset break-all'>
+                            className='inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-gray-500/10 ring-inset break-words'>
                             {intervalState.msg}
                         </span>
                     }
