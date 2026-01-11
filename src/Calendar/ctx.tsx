@@ -87,8 +87,13 @@ export const CalendarProvider = ({ children }: any) => {
     const [descriptions, setDescriptions] = useState<string[]>([]);
 
     const addIntervalCalendar = (dateInterval: DateInterval) => {
-        // Check intervals with null end date
-        const nowDate = showingDate;
+        // Check intervals with null end date ( if the showing date is today, use the current date)
+        let nowDate = new Date();
+
+        if (showingDate.getDate() !== nowDate.getDate()) {
+            nowDate = showingDate;
+        }
+
         if (isStopLastIntervalOnAdd) {
             console.log('Checking for intervals with no end date before adding new interval');
             const currentIntervals = getIntervals(calendar, dateInterval.start || nowDate);
