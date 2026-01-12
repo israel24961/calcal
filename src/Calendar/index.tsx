@@ -1,20 +1,6 @@
 import { JSX, useContext, useEffect, useRef, useState } from 'react';
-import { CalendarContext, DateInterval } from './ctx';
-import { intervalToDuration } from 'date-fns';
+import { CalendarContext, DateInterval, humanDuration, exportToClipboardAsMarkdownTable } from './ctx';
 
-function humanDuration(time: number): string {
-    if (time < 60) return time.toFixed(0) + 's';
-
-    const { days, hours, minutes, seconds } = intervalToDuration({ start: 0, end: time * 1000 });
-
-    const parts = [];
-    if (days) parts.push(`${days}d`);
-    if (hours) parts.push(`${hours}h`);
-    if (minutes) parts.push(`${minutes}m`);
-    if (seconds && time >= 60) parts.push(`${seconds}s`);
-
-    return parts.join('');
-}
 
 const paletteColors = [
     '#f87171', // red-400
@@ -37,9 +23,6 @@ function PastDatesCalendar(): JSX.Element {
     const showingResults = useRef<number>(5);
 
     const pastDates = calendarContext.getDates();
-
-
-
     return <div>
         <h3> Past dates </h3>
         <ul className="past-dates-list list-none pl-5">
@@ -52,7 +35,7 @@ function PastDatesCalendar(): JSX.Element {
                         }}
                         title={intervals.every(interval => interval.end) ? 'All intervals ended' : 'There are active intervals'}
                     >
-                    <span>{date.toDateString()} ({intervals.length} intervals)</span>
+                        <span>{date.toDateString()} ({intervals.length} intervals)</span>
                     </button>
                 </li>;
             })}
@@ -73,7 +56,7 @@ function PastDatesCalendar(): JSX.Element {
 
 export function Calendar(): JSX.Element {
     return <div className="calendar">
-        <h2>Calendar</h2>
+        <h2>cal cal</h2>
         <div className="flex min-h-screen">
             <aside className="w-64 bg-gray-800 text-white p-4">
                 <PastDatesCalendar />
@@ -122,7 +105,7 @@ function CalendarIntervalRepresentations(): JSX.Element {
 
     return <div className="today-intervals">
         {calendarContext.showingDate.toDateString() === curDate.toDateString() ?
-            <h3>Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')} - (Total time: {
+            <h3>Today's Intervals ({intervals.length}) - ({curDate.getHours().toString().padStart(2, '0')}:{curDate.getMinutes().toString().padStart(2, '0')}:{curDate.getSeconds().toString().padStart(2, '0')}) - (Total time: {
                 humanDuration(intervals.reduce((acc, interval) => {
                     const elapsed = interval.end ? (interval.end.getTime() - interval.start.getTime()) / 1000 : (new Date().getTime() - interval.start.getTime()) / 1000;
                     return acc + (elapsed || 0);
@@ -131,16 +114,23 @@ function CalendarIntervalRepresentations(): JSX.Element {
             </h3> :
             <h3> Historic Intervals for {calendarContext.showingDate.toDateString()} ({intervals.length})</h3>
         }
-        <button onClick={() => {
-            calendarContext.setIsStopLastIntervalOnAdd(!calendarContext.getIsStopLastIntervalOnAdd());
-        }}
-            title={`Toggle allowing only one interval to run at a time. Currently: ${calendarContext.getIsStopLastIntervalOnAdd() ? 'Only one allowed' : 'Multiple allowed'}`}
-        > {calendarContext.getIsStopLastIntervalOnAdd() ? 'Allowing only one to run' : 'Allowing multiple to run'} </button>
         <CalendarIntervals intervals={intervals} minimized={false} />
-        <button className="mouse" onClick={() => {
-            console.log('Adding interval');
-            calendarContext.addInterval({} as DateInterval);
-        }} > Add Interval</button>
+        <div className="grid grid-cols-2 content-center gap-4  ">
+            <button onClick={() => {
+                calendarContext.setIsStopLastIntervalOnAdd(!calendarContext.getIsStopLastIntervalOnAdd());
+            }}
+                title={`Toggle allowing only one interval to run at a time. Currently: ${calendarContext.getIsStopLastIntervalOnAdd() ? 'Only one allowed' : 'Multiple allowed'}`}
+            > {calendarContext.getIsStopLastIntervalOnAdd() ? 'Allowing only one to run' : 'Allowing multiple to run'} </button>
+            <button className="mouse" onClick={() => {
+                console.log('Adding interval');
+                calendarContext.addInterval({} as DateInterval);
+            }} > Add Interval</button>
+            <button className="export" onClick={() => {
+                console.log('Exporting intervals to clipboard as markdown table');
+                const markdownTable = calendarContext.exportToClipboardAsMarkdownTable();
+                console.log('Exported markdown table:', markdownTable);
+            }} > Export to Clipboard as Markdown Table</button>
+        </div>
     </div>;
 }
 function CalendarIntervals(props: { intervals: DateInterval[], minimized: boolean }): JSX.Element {

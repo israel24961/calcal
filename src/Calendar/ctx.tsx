@@ -1,4 +1,5 @@
 import { createContext, useState, useEffect } from 'react';
+import { intervalToDuration } from 'date-fns';
 
 export interface DateInterval {
     identifier: string;
@@ -21,6 +22,8 @@ interface CalendarContextType {
     getIsStopLastIntervalOnAdd(): boolean;
     showingDate: Date;
     setShowingDate(date: Date): void;
+    // Other functions
+    exportToClipboardAsMarkdownTable(): void;
 }
 
 export const CalendarContext = createContext<CalendarContextType>({
@@ -36,6 +39,7 @@ export const CalendarContext = createContext<CalendarContextType>({
     getIsStopLastIntervalOnAdd: () => true,
     showingDate: new Date(),
     setShowingDate: () => { },
+    exportToClipboardAsMarkdownTable: () => { },
 })
 
 function mapToObj(map: Map<string, DateInterval[]>): Record<string, DateInterval[]> {
@@ -286,7 +290,11 @@ export const CalendarProvider = ({ children }: any) => {
         setIsStopLastIntervalOnAdd: (value: boolean) => {
             setIsStopLastIntervalOnAdd(value);
         },
-        getIsStopLastIntervalOnAdd: () => isStopLastIntervalOnAdd
+        getIsStopLastIntervalOnAdd: () => isStopLastIntervalOnAdd,
+        exportToClipboardAsMarkdownTable: () => {
+            exportToClipboardAsMarkdownTable(calendarValue, showingDate);
+        }
+
     };
 
 
@@ -354,4 +362,60 @@ function canResumeInterval(dateInterval: DateInterval): boolean {
     const diff = now.getTime() - end.getTime();
     console.log('Difference in milliseconds:', diff);
     return diff < 60 * 1000; // Less than a minute
+}
+
+function exportToClipboardAsMarkdownTable(calendarContext: CalendarContextType, date: Date) {
+    const intervals = calendarContext.getIntervals(date);
+    if (intervals.length === 0) {
+        console.warn('No intervals found for date', date);
+        return;
+    }
+
+    let markdownTable = '|Duration | Start Time | End Time | Description |\n';
+    markdownTable += '|----------|------------|----------|-------------|\n';
+
+    intervals.forEach(interval => {
+        const startTime = interval.start ? interval.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+        const endTime = interval.end ? interval.end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ongoing';
+        const description = interval.msg || '';
+        markdownTable += `| ${humanDuration(((interval.end ? interval.end.getTime() : new Date().getTime()) - interval.start.getTime()) / 1000)} | ${startTime} | ${endTime} | ${description} |\n`;
+    });
+
+    // Append Now other table with duration per description
+    
+    const durationMap: Map<string, number> = new Map();
+    intervals.forEach(interval => {
+        const desc = interval.msg || 'No Description';
+        const duration = ((interval.end ? interval.end.getTime() : new Date().getTime()) - interval.start.getTime()) / 1000;
+        if (durationMap.has(desc)) {
+            durationMap.set(desc, durationMap.get(desc)! + duration);
+        } else {
+            durationMap.set(desc, duration);
+        }
+    });
+    markdownTable += `\n| Description | Total Duration |\n`;
+    markdownTable += `|-------------|----------------|\n`;
+    durationMap.forEach((duration, desc) => {
+        markdownTable += `| ${desc} | ${humanDuration(duration)} |\n`;
+    });
+
+    navigator.clipboard.writeText(markdownTable).then(() => {
+        console.log('Markdown table copied to clipboard');
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+}
+
+export function humanDuration(time: number): string {
+    if (time < 60) return time.toFixed(0) + 's';
+
+    const { days, hours, minutes, seconds } = intervalToDuration({ start: 0, end: time * 1000 });
+
+    const parts = [];
+    if (days) parts.push(`${days}d`);
+    if (hours) parts.push(`${hours}h`);
+    if (minutes) parts.push(`${minutes}m`);
+    if (seconds && time >= 60) parts.push(`${seconds}s`);
+
+    return parts.join('');
 }
