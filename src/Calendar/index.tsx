@@ -1,5 +1,5 @@
 import { JSX, useContext, useEffect, useRef, useState } from 'react';
-import { CalendarContext, DateInterval, humanDuration, exportToClipboardAsMarkdownTable } from './ctx';
+import { CalendarContext, DateInterval, humanDuration} from './ctx';
 
 
 const paletteColors = [
