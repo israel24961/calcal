@@ -340,7 +340,6 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
     const handleChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const value = e.target.value;
         props.onSave({ ...props.interval, msg: value });
-        // setIntervalState(prev => ({...prev, msg: value }));
     };
 
 

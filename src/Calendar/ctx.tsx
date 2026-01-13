@@ -219,7 +219,23 @@ export const CalendarProvider = ({ children }: any) => {
             return croppedInterval.identifier;
         },
         getDescriptions: () => {
-            return descriptions.length > 0 ? descriptions : ['No descriptions available'];
+            if (descriptions.length > 0) {
+                return descriptions;
+            }
+            // Extract from the last 3 days
+            let descs: string[] = [];
+            const now = new Date();
+            for (let i = 0; i < 3; i++) {
+                const dayD = new Date(now);
+                dayD.setDate(now.getDate() - i);
+                dayD.setHours(0, 0, 0, 0);
+                const day = dayD.toDateString();
+                const intervals = calendar.get(day) || [];
+                const dayDescs = intervals.map(interval => interval.msg).filter(msg => msg && msg.trim().length > 0);
+                descs = descs.concat(dayDescs);
+            }
+
+            return Array.from(new Set(descs)).sort();
         },
         deleteInterval: (dateInterval: DateInterval): string | null => {
             if (!dateInterval.start)
@@ -382,7 +398,7 @@ function exportToClipboardAsMarkdownTable(calendarContext: CalendarContextType, 
     });
 
     // Append Now other table with duration per description
-    
+
     const durationMap: Map<string, number> = new Map();
     intervals.forEach(interval => {
         const desc = interval.msg || 'No Description';
