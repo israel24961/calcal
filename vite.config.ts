@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => {
             react(),
         ],
         server: {
+            port: 5173,
+            host: "0.0.0.0",
             proxy: {
                 '/api': {
                     target: process.env.VITE_URLBACK,

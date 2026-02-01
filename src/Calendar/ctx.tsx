@@ -219,20 +219,16 @@ export const CalendarProvider = ({ children }: any) => {
             return croppedInterval.identifier;
         },
         getDescriptions: () => {
-            if (descriptions.length > 0) {
-                return descriptions;
-            }
-            // Extract from the last 3 days
+            // Extract all descriptions from the last X days
             let descs: string[] = [];
-            const now = new Date();
-            for (let i = 0; i < 3; i++) {
-                const dayD = new Date(now);
-                dayD.setDate(now.getDate() - i);
-                dayD.setHours(0, 0, 0, 0);
-                const day = dayD.toDateString();
-                const intervals = calendar.get(day) || [];
-                const dayDescs = intervals.map(interval => interval.msg).filter(msg => msg && msg.trim().length > 0);
-                descs = descs.concat(dayDescs);
+            const lastXDates = calendar.keys();
+            for (const dayKey of lastXDates) {
+                const dayIntervals = calendar.get(dayKey) || [];
+                for (const interval of dayIntervals) {
+                    if (interval.msg && interval.msg.trim().length > 0) {
+                        descs.push(interval.msg.trim());
+                    }
+                }
             }
 
             return Array.from(new Set(descs)).sort();

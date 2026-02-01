@@ -1,5 +1,5 @@
 import { JSX, useContext, useEffect, useRef, useState } from 'react';
-import { CalendarContext, DateInterval, humanDuration} from './ctx';
+import { CalendarContext, DateInterval, humanDuration } from './ctx';
 
 
 const paletteColors = [
@@ -20,9 +20,9 @@ const paletteColors = [
 // Dark gray letter if all intervals are ended, otherwise white letter and white gray background. and a tooltip showing that there are active intervals.
 function PastDatesCalendar(): JSX.Element {
     const calendarContext = useContext(CalendarContext);
-    const showingResults = useRef<number>(5);
+    const [showingResults, setShowingResults] = useState(5);
 
-    const pastDates = calendarContext.getDates();
+    const pastDates = calendarContext.getDates().filter(date => date < new Date()).sort((a, b) => b.getTime() - a.getTime()).slice(0, showingResults);
     return <div>
         <h3> Past dates </h3>
         <ul className="past-dates-list list-none pl-5">
@@ -42,11 +42,9 @@ function PastDatesCalendar(): JSX.Element {
             <li>
                 <button className="load-more-button text-blue-500"
                     onClick={() => {
-                        showingResults.current += 5;
-                        // Force re-render
-                        calendarContext.setShowingDate(calendarContext.showingDate);
+                        setShowingResults(prev => prev + 5);
                     }}>
-                    {pastDates.length > showingResults.current ? 'Load more dates' : 'No more dates to load'}
+                    {showingResults < calendarContext.getDates().length ? 'Load more dates' : 'No more dates to load'}
                 </button>
             </li>
         </ul>
@@ -326,22 +324,6 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
         }
     }, []);
 
-    const [descriptOptions, setDescriptOptions] = useState<string[]>();
-
-    const handleDescriptionSelect = () => {
-        const descriptions = calendarContext.getDescriptions();
-        if (descriptions.length > 0) {
-            setDescriptOptions(descriptions);
-        } else {
-            setDescriptOptions(['No descriptions available']);
-        }
-    };
-
-    const handleChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const value = e.target.value;
-        props.onSave({ ...props.interval, msg: value });
-    };
-
 
     return <div className="interval-edit" style={{ display: 'flex', flexDirection: 'row', gap: '10px' }} ref={node}
         onKeyDown={(e) => {
@@ -363,24 +345,13 @@ function CalendarOneIntervalEdit(props: { interval: DateInterval, onSave: (inter
             const newInterval = { ...props.interval, end: date };
             props.onSave(newInterval);
         }} canBeEmpty={true} />
-        <input className="msg" style={{ marginLeft: '10px', padding: '5px' }}
-            type="text" value={props.interval.msg || ''}
-            onChange={(e) => {
-                const newInterval = { ...props.interval, msg: e.target.value };
-                calendarContext.updateInterval(newInterval);
-                props.onSave(newInterval);
-            }} />
-        <select
-            className="text-sm"
-            onMouseDown={handleDescriptionSelect}
-            onChange={handleChangeSelect}
-            value={''}
-        >
-            <option value="">Select Description</option>
-            {descriptOptions && descriptOptions.map((desc, index) => (
-                <option key={index} value={desc}>{desc}</option>
-            ))}
-        </select>
+        <SelectDescriptions onChange={chosenDesc => {
+            const newInterval = { ...props.interval, msg: chosenDesc };
+            calendarContext.updateInterval(newInterval);
+            props.onSave(newInterval);
+        }} initialValue={props.interval.msg}
+        />
+
     </div>
 }
 
@@ -432,3 +403,39 @@ function EditableDateInHoursMinutes(props: { date: Date | null, onChange: (date:
             }} />
     </div>;
 }
+
+import CreatableSelect from 'react-select/creatable';
+// Dropdown to select from existing descriptions in the calendar context
+// or create a new one.
+function SelectDescriptions(props: { onChange: (chosenDesc: string) => void , initialValue: string }): JSX.Element {
+    const calendarContext = useContext(CalendarContext);
+    const descriptions = calendarContext.getDescriptions();
+    
+    const options = descriptions.map(desc => ({ value: desc, label: desc }));
+    return <div className="select-descriptions" style={{ minWidth: '150px', marginLeft: '10px' }}>
+        <CreatableSelect
+            onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                    props.onChange((e.target as HTMLInputElement).value);
+                    e.stopPropagation();
+                }
+            }}
+            isClearable
+            onChange={(newValue) => {
+                if (newValue) {
+                    props.onChange(newValue.value);
+                }
+            }}
+            options={options}
+            placeholder="Select or create description"
+            styles={{
+                container: (provided) => ({
+                    ...provided,
+                    width: '30vw'
+                }),
+            }}
+            value={props.initialValue ? { value: props.initialValue, label: props.initialValue } : null}
+        />
+    </div>;
+}
+
